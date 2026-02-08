@@ -1,56 +1,38 @@
-'use client';
+"use client";
 
-import { cn } from '@/lib/utils';
-
-interface ButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
-  disabled?: boolean;
-  active?: boolean;
-}
-
-const variants = {
-  primary:
-    'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50',
-  secondary:
-    'bg-panel border-border text-text-primary hover:border-primary/30 hover:text-primary',
-  ghost:
-    'bg-transparent border-transparent text-text-secondary hover:text-text-primary hover:bg-panel',
-  danger:
-    'bg-danger/10 border-danger/30 text-danger hover:bg-danger/20 hover:border-danger/50',
-};
-
-const sizes = {
-  sm: 'text-xs px-3 py-1.5',
-  md: 'text-sm px-4 py-2.5',
-  lg: 'text-sm px-6 py-3',
+const variantStyles: Record<string, string> = {
+  brand: "bg-brand hover:bg-brand/80 text-white",
+  green: "bg-green hover:bg-green/80 text-white",
+  red: "bg-red hover:bg-red/80 text-white",
+  amber: "bg-amber hover:bg-amber/80 text-black",
+  orange: "bg-orange hover:bg-orange/80 text-white",
+  ghost: "bg-transparent hover:bg-raised text-text-soft border border-border",
+  outline: "bg-transparent hover:bg-raised text-text border border-border",
 };
 
 export function Button({
   children,
   onClick,
-  variant = 'primary',
-  size = 'md',
-  className,
+  variant = "brand",
   disabled,
-  active,
-}: ButtonProps) {
+  className = "",
+  full,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: string;
+  disabled?: boolean;
+  className?: string;
+  full?: boolean;
+}) {
+  const vs = variantStyles[variant] || variantStyles.brand;
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={cn(
-        'inline-flex items-center justify-center gap-2 border rounded-lg font-medium',
-        'transition-all duration-200 active:scale-[0.98]',
-        'disabled:opacity-40 disabled:cursor-not-allowed',
-        variants[variant],
-        sizes[size],
-        active && 'border-primary/50 bg-primary/20 text-primary',
-        className
-      )}
+      className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
+        transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+        ${vs} ${full ? "w-full" : ""} ${className}`}
     >
       {children}
     </button>
