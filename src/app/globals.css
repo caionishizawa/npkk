@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1E2732 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #1E2732;
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #2D3848;
+}
+
+body {
+  color: #E6EDF3;
+  background: #0A0E14;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection */
+::selection {
+  background: rgba(0, 217, 255, 0.2);
+  color: #E6EDF3;
+}
+
+/* Custom focus ring */
+*:focus-visible {
+  outline: 2px solid rgba(0, 217, 255, 0.4);
+  outline-offset: 2px;
+}
+
+/* Scanline effect for loading states */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00D9FF, transparent);
+  animation: scanline 2s linear infinite;
+  opacity: 0.3;
+}
+
+/* Number animation transition */
+.number-transition {
+  transition: all 0.3s ease-out;
+}
+
+/* Select dropdown styling */
+select option {
+  background: #151B23;
+  color: #E6EDF3;
+}
