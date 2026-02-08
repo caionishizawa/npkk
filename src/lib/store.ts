@@ -1,252 +1,238 @@
-import { create } from 'zustand';
-import type {
-  Network,
-  Protocol,
-  Market,
-  ProInputs,
-  StrategyResult,
-  StressTestResult,
-  CompareStrategy,
-  CompareSortKey,
-  PointsInputs,
-  PointsResult,
-} from './types';
-import {
-  calculateStrategy,
-  stressTest,
-  calculateUnwindPlan,
-  calculateBreakevenAnalysis,
-  calculateRoeVsLtvCurve,
-  calculatePointsValue,
-  calculateRar,
-  getSafetyScore,
-} from './engine';
-import { getProtocolsForNetwork, getMarketsForProtocol, getCurrentPrice } from './data';
-import type { UnwindPlan, BreakevenAnalysis, RoeVsLtvPoint } from './types';
+import { create } from "zustand";
+import { Project, LiqResult, LoopResult, LoopParams } from "./types";
+import { DEFAULT_PROJECTS, ASSET_PRICES } from "./data";
+import { calcLiquidation, simulateLoops } from "./engine";
 
 // ========================
-// Strategy Store
+// App Store
 // ========================
-interface StrategyState {
-  // Inputs
-  network: Network;
-  protocol: Protocol;
-  marketId: string;
-  capital: number;
-  riskTolerance: number;
-  showProMode: boolean;
-  pro: ProInputs;
+export type ViewType = "airdrops" | "lending" | "loops" | "admin";
 
-  // Results
-  result: StrategyResult | null;
+interface AppState {
+  projects: Project[];
+  view: ViewType;
+  selectedProjectId: string | null;
 
-  // Actions
-  setNetwork: (n: Network) => void;
-  setProtocol: (p: Protocol) => void;
-  setMarketId: (id: string) => void;
-  setCapital: (c: number) => void;
-  setRiskTolerance: (r: number) => void;
-  toggleProMode: () => void;
-  setProField: <K extends keyof ProInputs>(key: K, val: ProInputs[K]) => void;
-  calculate: (market: Market) => void;
+  setView: (v: ViewType) => void;
+  setSelected: (id: string | null) => void;
+  addProject: (p: Project) => void;
+  updateProject: (id: string, p: Partial<Project>) => void;
+  deleteProject: (id: string) => void;
 }
 
-export const useStrategyStore = create<StrategyState>((set, get) => ({
-  network: 'arbitrum',
-  protocol: 'aave-v3',
-  marketId: 'aave-v3-weth-usdc',
-  capital: 10000,
-  riskTolerance: 25,
-  showProMode: false,
-  pro: {
-    targetLtv: 0.70,
-    minHealthFactor: 1.25,
-    borrowSpikeBuffer: 0.05,
-    slippageFees: 0.003,
-    liquidationBonus: 0.05,
-    depegHaircut: 0.02,
-    loopStopThreshold: 1.15,
-    oracleConfidence: 'high',
-  },
-  result: null,
+export const useAppStore = create<AppState>((set) => ({
+  projects: DEFAULT_PROJECTS,
+  view: "airdrops",
+  selectedProjectId: null,
 
-  setNetwork: (network) => {
-    const protocols = getProtocolsForNetwork(network);
-    const protocol = protocols[0]?.id ?? 'aave-v3';
-    const markets = getMarketsForProtocol(network, protocol);
-    const marketId = markets[0]?.id ?? '';
-    set({ network, protocol, marketId, result: null });
-  },
-  setProtocol: (protocol) => {
-    const { network } = get();
-    const markets = getMarketsForProtocol(network, protocol);
-    const marketId = markets[0]?.id ?? '';
-    set({ protocol, marketId, result: null });
-  },
-  setMarketId: (marketId) => set({ marketId, result: null }),
-  setCapital: (capital) => set({ capital }),
-  setRiskTolerance: (riskTolerance) => {
-    // Map risk tolerance to target LTV
-    const ltvMap: Record<number, number> = { 15: 0.60, 20: 0.65, 25: 0.70, 30: 0.75, 35: 0.80 };
-    const targetLtv = ltvMap[riskTolerance] ?? 0.70;
+  setView: (view) => set({ view, selectedProjectId: null }),
+  setSelected: (selectedProjectId) => set({ selectedProjectId }),
+  addProject: (p) => set((s) => ({ projects: [...s.projects, p] })),
+  updateProject: (id, partial) =>
     set((s) => ({
-      riskTolerance,
-      pro: { ...s.pro, targetLtv },
-    }));
-  },
-  toggleProMode: () => set((s) => ({ showProMode: !s.showProMode })),
-  setProField: (key, val) =>
-    set((s) => ({ pro: { ...s.pro, [key]: val } })),
-  calculate: (market) => {
-    const { capital, pro, showProMode } = get();
-    const price = getCurrentPrice(market.collateralToken);
-    const result = calculateStrategy(
-      market,
-      capital,
-      price,
-      showProMode ? pro : { ...pro }
+      projects: s.projects.map((p) => (p.id === id ? { ...p, ...partial } : p)),
+    })),
+  deleteProject: (id) =>
+    set((s) => ({
+      projects: s.projects.filter((p) => p.id !== id),
+      selectedProjectId: s.selectedProjectId === id ? null : s.selectedProjectId,
+    })),
+}));
+
+// ========================
+// Lending Store
+// ========================
+interface SavedOp {
+  id: string;
+  label: string;
+  result: LiqResult;
+  timestamp: number;
+}
+
+interface LendingState {
+  protocol: string;
+  network: string;
+  marketIndex: number;
+  supplyAsset: string;
+  borrowAsset: string;
+  supplyAmount: number;
+  borrowAmount: number;
+  maxLtv: number;
+  lltv: number;
+  supplyApy: number;
+  borrowApy: number;
+  includeApy: boolean;
+  result: LiqResult | null;
+  savedOps: SavedOp[];
+
+  setProtocol: (p: string) => void;
+  setNetwork: (n: string) => void;
+  setMarketIndex: (i: number) => void;
+  setSupplyAsset: (a: string) => void;
+  setBorrowAsset: (a: string) => void;
+  setSupplyAmount: (v: number) => void;
+  setBorrowAmount: (v: number) => void;
+  setMaxLtv: (v: number) => void;
+  setLltv: (v: number) => void;
+  setSupplyApy: (v: number) => void;
+  setBorrowApy: (v: number) => void;
+  setIncludeApy: (v: boolean) => void;
+  calculate: () => void;
+  saveOp: (label: string) => void;
+  deleteOp: (id: string) => void;
+  reset: () => void;
+}
+
+export const useLendingStore = create<LendingState>((set, get) => ({
+  protocol: "custom",
+  network: "ethereum",
+  marketIndex: 0,
+  supplyAsset: "WETH",
+  borrowAsset: "USDC",
+  supplyAmount: 1,
+  borrowAmount: 1000,
+  maxLtv: 80,
+  lltv: 86,
+  supplyApy: 3,
+  borrowApy: 5,
+  includeApy: false,
+  result: null,
+  savedOps: [],
+
+  setProtocol: (protocol) => set({ protocol, result: null }),
+  setNetwork: (network) => set({ network, result: null }),
+  setMarketIndex: (marketIndex) => set({ marketIndex, result: null }),
+  setSupplyAsset: (supplyAsset) => set({ supplyAsset, result: null }),
+  setBorrowAsset: (borrowAsset) => set({ borrowAsset, result: null }),
+  setSupplyAmount: (supplyAmount) => set({ supplyAmount }),
+  setBorrowAmount: (borrowAmount) => set({ borrowAmount }),
+  setMaxLtv: (maxLtv) => set({ maxLtv }),
+  setLltv: (lltv) => set({ lltv }),
+  setSupplyApy: (supplyApy) => set({ supplyApy }),
+  setBorrowApy: (borrowApy) => set({ borrowApy }),
+  setIncludeApy: (includeApy) => set({ includeApy }),
+  calculate: () => {
+    const s = get();
+    const result = calcLiquidation(
+      s.supplyAmount,
+      s.supplyAsset,
+      s.borrowAmount,
+      s.borrowAsset,
+      s.maxLtv,
+      s.lltv,
+      s.supplyApy,
+      s.borrowApy,
+      s.includeApy
     );
     set({ result });
   },
+  saveOp: (label) => {
+    const { result, savedOps } = get();
+    if (!result) return;
+    const op: SavedOp = {
+      id: Date.now().toString(36),
+      label,
+      result,
+      timestamp: Date.now(),
+    };
+    set({ savedOps: [...savedOps, op] });
+  },
+  deleteOp: (id) =>
+    set((s) => ({ savedOps: s.savedOps.filter((o) => o.id !== id) })),
+  reset: () =>
+    set({
+      protocol: "custom",
+      network: "ethereum",
+      marketIndex: 0,
+      supplyAsset: "WETH",
+      borrowAsset: "USDC",
+      supplyAmount: 1,
+      borrowAmount: 1000,
+      maxLtv: 80,
+      lltv: 86,
+      supplyApy: 3,
+      borrowApy: 5,
+      includeApy: false,
+      result: null,
+    }),
 }));
 
 // ========================
-// Risk Lab Store
+// Loop Store
 // ========================
-interface RiskLabState {
-  priceDrop: number;
-  borrowSpike: number;
-  depeg: number;
-  stressResult: StressTestResult | null;
-  unwindPlan: UnwindPlan | null;
-  breakeven: BreakevenAnalysis | null;
-  roeLtvCurve: RoeVsLtvPoint[];
+interface LoopState {
+  investmentUsd: number;
+  investInToken: boolean;
+  collateralToken: string;
+  debtToken: string;
+  maxLtvPct: number;
+  lltvPct: number;
+  collateralApr: number;
+  debtInterest: number;
+  exposureDays: number;
+  minLoopValue: number;
+  safetyMargin: number;
+  result: LoopResult | null;
 
-  setPriceDrop: (v: number) => void;
-  setBorrowSpike: (v: number) => void;
-  setDepeg: (v: number) => void;
-  runStressTest: (result: StrategyResult) => void;
-  runUnwindPlan: (result: StrategyResult) => void;
-  runBreakeven: (result: StrategyResult, market: Market) => void;
-  runRoeLtvCurve: (market: Market, capital: number) => void;
+  setInvestmentUsd: (v: number) => void;
+  setInvestInToken: (v: boolean) => void;
+  setCollateralToken: (t: string) => void;
+  setDebtToken: (t: string) => void;
+  setMaxLtvPct: (v: number) => void;
+  setLltvPct: (v: number) => void;
+  setCollateralApr: (v: number) => void;
+  setDebtInterest: (v: number) => void;
+  setExposureDays: (v: number) => void;
+  setMinLoopValue: (v: number) => void;
+  setSafetyMargin: (v: number) => void;
+  simulate: () => void;
 }
 
-export const useRiskLabStore = create<RiskLabState>((set, get) => ({
-  priceDrop: 0.2,
-  borrowSpike: 0.05,
-  depeg: 0,
-  stressResult: null,
-  unwindPlan: null,
-  breakeven: null,
-  roeLtvCurve: [],
-
-  setPriceDrop: (priceDrop) => set({ priceDrop }),
-  setBorrowSpike: (borrowSpike) => set({ borrowSpike }),
-  setDepeg: (depeg) => set({ depeg }),
-  runStressTest: (result) => {
-    const { priceDrop, borrowSpike, depeg } = get();
-    const sr = stressTest(result, priceDrop, borrowSpike, depeg);
-    set({ stressResult: sr });
-  },
-  runUnwindPlan: (result) => {
-    const { stressResult } = get();
-    const currentHf = stressResult?.newHealthFactor ?? result.healthFactor;
-    const plan = calculateUnwindPlan(result, currentHf);
-    set({ unwindPlan: plan });
-  },
-  runBreakeven: (result, market) => {
-    const mult = result.effectiveLeverage;
-    const be = calculateBreakevenAnalysis(result, market, mult);
-    set({ breakeven: be });
-  },
-  runRoeLtvCurve: (market, capital) => {
-    const price = getCurrentPrice(market.collateralToken);
-    const curve = calculateRoeVsLtvCurve(market, capital, price);
-    set({ roeLtvCurve: curve });
-  },
-}));
-
-// ========================
-// Compare Store
-// ========================
-interface CompareState {
-  strategies: CompareStrategy[];
-  sortKey: CompareSortKey;
-
-  addStrategy: (name: string, inputs: CompareStrategy['inputs'], result: StrategyResult) => void;
-  removeStrategy: (id: string) => void;
-  clearAll: () => void;
-  setSortKey: (key: CompareSortKey) => void;
-}
-
-export const useCompareStore = create<CompareState>((set) => ({
-  strategies: [],
-  sortKey: 'rar',
-
-  addStrategy: (name, inputs, result) => {
-    const rar = calculateRar(result.netRoeOrganic * 100, result.distanceToLiquidation * 100);
-    const stressHf = stressTest(result, 0.25).newHealthFactor;
-    const safetyScore = getSafetyScore(stressHf);
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    set((s) => ({
-      strategies: [...s.strategies, { id, name, inputs, result, rar, safetyScore }],
-    }));
-  },
-  removeStrategy: (id) =>
-    set((s) => ({ strategies: s.strategies.filter((st) => st.id !== id) })),
-  clearAll: () => set({ strategies: [] }),
-  setSortKey: (sortKey) => set({ sortKey }),
-}));
-
-// ========================
-// Points Store
-// ========================
-interface PointsState {
-  inputs: PointsInputs;
-  result: PointsResult | null;
-
-  setField: <K extends keyof PointsInputs>(key: K, val: PointsInputs[K]) => void;
-  calculate: () => void;
-}
-
-export const usePointsStore = create<PointsState>((set, get) => ({
-  inputs: {
-    protocol: 'morpho-blue',
-    campaignName: 'Q1 2025 Points',
-    pointsPerDay: 1250,
-    duration: 90,
-    multiplier: 1.5,
-    totalPointsMin: 50_000_000,
-    totalPointsMax: 200_000_000,
-    fdvConservative: 100_000_000,
-    fdvBase: 250_000_000,
-    fdvBull: 625_000_000,
-    airdropPercent: 0.15,
-    sybilDiscount: 0,
-    perWalletCap: null,
-    tgeUnlockPercent: 0.20,
-    vestingMonths: 12,
-  },
+export const useLoopStore = create<LoopState>((set, get) => ({
+  investmentUsd: 10000,
+  investInToken: false,
+  collateralToken: "wstETH",
+  debtToken: "WETH",
+  maxLtvPct: 86,
+  lltvPct: 94.5,
+  collateralApr: 3.5,
+  debtInterest: 2.8,
+  exposureDays: 90,
+  minLoopValue: 500,
+  safetyMargin: 5,
   result: null,
 
-  setField: (key, val) =>
-    set((s) => ({ inputs: { ...s.inputs, [key]: val } })),
-  calculate: () => {
-    const { inputs } = get();
-    const result = calculatePointsValue(inputs);
+  setInvestmentUsd: (investmentUsd) => set({ investmentUsd }),
+  setInvestInToken: (investInToken) => set({ investInToken }),
+  setCollateralToken: (collateralToken) => set({ collateralToken }),
+  setDebtToken: (debtToken) => set({ debtToken }),
+  setMaxLtvPct: (maxLtvPct) => set({ maxLtvPct }),
+  setLltvPct: (lltvPct) => set({ lltvPct }),
+  setCollateralApr: (collateralApr) => set({ collateralApr }),
+  setDebtInterest: (debtInterest) => set({ debtInterest }),
+  setExposureDays: (exposureDays) => set({ exposureDays }),
+  setMinLoopValue: (minLoopValue) => set({ minLoopValue }),
+  setSafetyMargin: (safetyMargin) => set({ safetyMargin }),
+  simulate: () => {
+    const s = get();
+    let investmentUsd = s.investmentUsd;
+    if (s.investInToken) {
+      const price = ASSET_PRICES[s.collateralToken] || 1;
+      investmentUsd = s.investmentUsd * price;
+    }
+    const params: LoopParams = {
+      investmentUsd,
+      collateralToken: s.collateralToken,
+      debtToken: s.debtToken,
+      maxLtvPct: s.maxLtvPct,
+      lltvPct: s.lltvPct,
+      collateralApr: s.collateralApr,
+      debtInterest: s.debtInterest,
+      exposureDays: s.exposureDays,
+      minLoopValue: s.minLoopValue,
+      safetyMargin: s.safetyMargin,
+    };
+    const result = simulateLoops(params);
     set({ result });
   },
-}));
-
-// ========================
-// UI Store
-// ========================
-interface UIState {
-  activeTab: 'strategy' | 'risk' | 'compare' | 'points';
-  setActiveTab: (tab: UIState['activeTab']) => void;
-}
-
-export const useUIStore = create<UIState>((set) => ({
-  activeTab: 'strategy',
-  setActiveTab: (activeTab) => set({ activeTab }),
 }));

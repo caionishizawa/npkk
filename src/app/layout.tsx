@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "LoopLab - DeFi Loop Strategy Analyzer",
-  description: "Model, optimize and compare DeFi lending/borrowing loop strategies with rigorous quantitative analysis.",
+  title: "npk research — DeFi Platform",
+  description: "Airdrop tracker, liquidation calculator, loop simulator, and admin panel for DeFi research.",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-background text-text-primary">
+      <body className="antialiased min-h-screen bg-bg text-text">
         {children}
       </body>
     </html>
