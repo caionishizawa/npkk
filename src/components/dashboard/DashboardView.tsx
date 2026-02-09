@@ -6,11 +6,13 @@ import { ProjectCard } from "./ProjectCard";
 import { WarningBanner } from "@/components/ui/WarningBanner";
 import { DetailsView } from "@/components/details/DetailsView";
 import { Search } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 export function DashboardView() {
   const projects = useAppStore((s) => s.projects);
   const selectedId = useAppStore((s) => s.selectedProjectId);
   const setSelected = useAppStore((s) => s.setSelected);
+  const lang = useAppStore((s) => s.lang);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "ended" | "upcoming">("all");
@@ -28,12 +30,16 @@ export function DashboardView() {
     return matchSearch && matchFilter;
   });
 
+  const filterLabels = {
+    all: t("dash.all", lang),
+    active: t("dash.active", lang),
+    ended: t("dash.ended", lang),
+    upcoming: t("dash.upcoming", lang),
+  };
+
   return (
     <div className="space-y-6">
-      <WarningBanner>
-        All values are estimates based on public data. Token values use projected
-        FDV — actual prices at TGE may differ significantly. DYOR.
-      </WarningBanner>
+      <WarningBanner>{t("dash.warning", lang)}</WarningBanner>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -42,7 +48,7 @@ export function DashboardView() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search projects..."
+            placeholder={t("dash.search", lang)}
             className="w-full bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text
               placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
           />
@@ -58,7 +64,7 @@ export function DashboardView() {
                   : "text-text-muted hover:text-text-soft hover:bg-raised"
               }`}
             >
-              {f}
+              {filterLabels[f]}
             </button>
           ))}
         </div>
@@ -76,7 +82,7 @@ export function DashboardView() {
 
       {filtered.length === 0 && (
         <div className="text-center py-12 text-text-muted text-sm">
-          No projects found.
+          {t("dash.noProjects", lang)}
         </div>
       )}
     </div>

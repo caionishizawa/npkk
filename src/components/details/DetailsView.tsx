@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Toggle } from "@/components/ui/Toggle";
 import { ArrowLeft, Info, FileText, Calculator, Target, TrendingUp } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 function fmt(n: number, d = 2): string {
   if (n >= 1e12) return (n / 1e12).toFixed(d) + "T";
@@ -29,6 +30,7 @@ function fmtVpp(n: number): string {
 
 export function DetailsView({ project }: { project: Project }) {
   const setSelected = useAppStore((s) => s.setSelected);
+  const lang = useAppStore((s) => s.lang);
   const m = useMemo(() => calcMetrics(project), [project]);
 
   const [useApprox, setUseApprox] = useState(false);
@@ -44,33 +46,21 @@ export function DetailsView({ project }: { project: Project }) {
 
   const statusVariant =
     project.status === "active" ? "green" : project.status === "ended" ? "red" : "amber";
+  const statusLabel = t(`status.${project.status}` as "status.active" | "status.ended" | "status.upcoming", lang);
 
-  // Point scenario cards
-  const scenarioConservative = {
-    totalPts: m.tc,
-    vpp: m.vc,
-    dailyPts: m.dc,
-    ppt: m.ptc,
-  };
-  const scenarioApprox = {
-    totalPts: m.ta,
-    vpp: m.va,
-    dailyPts: m.da,
-    ppt: m.pta,
-  };
+  const scenarioConservative = { totalPts: m.tc, vpp: m.vc, dailyPts: m.dc, ppt: m.ptc };
+  const scenarioApprox = { totalPts: m.ta, vpp: m.va, dailyPts: m.da, ppt: m.pta };
 
   return (
     <div className="space-y-6">
-      {/* Back button */}
       <button
         onClick={() => setSelected(null)}
         className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Dashboard
+        {t("detail.back", lang)}
       </button>
 
-      {/* Header */}
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-xl bg-brand/15 text-brand flex items-center justify-center text-xl font-bold shrink-0">
           {project.name[0]}
@@ -79,14 +69,13 @@ export function DetailsView({ project }: { project: Project }) {
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h1 className="text-xl font-bold text-text">{project.name}</h1>
             <Badge variant="brand">{project.season}</Badge>
-            <Badge variant={statusVariant}>{project.status}</Badge>
+            <Badge variant={statusVariant}>{statusLabel}</Badge>
             <Badge variant="muted">{project.nc}</Badge>
           </div>
           <p className="text-sm text-text-muted">{project.desc}</p>
         </div>
       </div>
 
-      {/* Notice & Description */}
       {project.notice && (
         <Card className="border-amber/30 bg-amber/5">
           <div className="flex items-start gap-2">
@@ -105,75 +94,72 @@ export function DetailsView({ project }: { project: Project }) {
         </Card>
       )}
 
-      {/* Big VPP Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-green/10 border border-green/20 rounded-xl p-5">
           <div className="text-xs text-green/70 uppercase tracking-wider mb-2">
-            Value Per Point — Conservative
+            {t("detail.vppConservativeTitle", lang)}
           </div>
           <div className="font-mono text-2xl font-bold text-green mb-1">
             {fmtVpp(m.vc)}
           </div>
           <div className="text-xs text-green/60">
-            Based on {fmt(m.tc)} total projected points
+            {t("detail.basedOn", lang)} {fmt(m.tc)} {t("detail.totalProjectedPts", lang)}
           </div>
         </div>
         <div className="bg-purple/10 border border-purple/20 rounded-xl p-5">
           <div className="text-xs text-purple/70 uppercase tracking-wider mb-2">
-            Value Per Point — Approximate
+            {t("detail.vppApproxTitle", lang)}
           </div>
           <div className="font-mono text-2xl font-bold text-purple mb-1">
             {fmtVpp(m.va)}
           </div>
           <div className="text-xs text-purple/60">
-            Based on {fmt(m.ta)} total estimated points (80%)
+            {t("detail.basedOn", lang)} {fmt(m.ta)} {t("detail.totalEstimatedPts", lang)}
           </div>
         </div>
       </div>
 
-      {/* Metrics Grid */}
-      <SectionTitle icon={<TrendingUp className="w-4 h-4" />}>Metrics</SectionTitle>
+      <SectionTitle icon={<TrendingUp className="w-4 h-4" />}>{t("detail.metrics", lang)}</SectionTitle>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat label="Airdrop Supply" value={fmt(m.as)} />
-        <Stat label="Airdrop Value" value={"$" + fmt(m.av)} color="text-green" />
-        <Stat label="Days Remaining" value={m.d.toString()} color="text-amber" />
+        <Stat label={t("detail.airdropSupply", lang)} value={fmt(m.as)} />
+        <Stat label={t("detail.airdropValue", lang)} value={"$" + fmt(m.av)} color="text-green" />
+        <Stat label={t("detail.daysRemaining", lang)} value={m.d.toString()} color="text-amber" />
         <Stat label="FDV" value={"$" + fmt(project.fdv)} />
         <Stat label="TVL" value={"$" + fmt(project.tvl)} />
-        <Stat label="Token Value" value={"$" + project.tokenValue.toFixed(2)} />
+        <Stat label={t("detail.tokenValue", lang)} value={"$" + project.tokenValue.toFixed(2)} />
         <Stat label="Airdrop %" value={project.airdropPercent + "%"} color="text-brand" />
-        <Stat label="Current Points" value={fmt(project.currentPoints)} />
+        <Stat label={t("detail.currentPoints", lang)} value={fmt(project.currentPoints)} />
       </div>
 
-      {/* ROI Simulator */}
       <SectionTitle icon={<Calculator className="w-4 h-4" />}>
-        ROI Simulator
+        {t("detail.roiSimulator", lang)}
       </SectionTitle>
       <Card>
         <div className="space-y-4">
           <Toggle
-            label={useApprox ? "Using Approximate Scenario" : "Using Conservative Scenario"}
+            label={useApprox ? t("detail.usingApprox", lang) : t("detail.usingConservative", lang)}
             checked={useApprox}
             onChange={setUseApprox}
           />
           <div className="flex gap-3 items-end">
             <Input
-              label="Your Points"
+              label={t("detail.yourPoints", lang)}
               value={userPoints}
               onChange={setUserPoints}
               type="number"
               className="flex-1"
             />
-            <Button onClick={handleCalcRoi}>Calculate</Button>
+            <Button onClick={handleCalcRoi}>{t("detail.calculate", lang)}</Button>
           </div>
           {roiResult && (
             <div className="grid grid-cols-2 gap-3 mt-3">
               <Stat
-                label="Estimated Value"
+                label={t("detail.estimatedValue", lang)}
                 value={"$" + roiResult.value.toFixed(2)}
                 color="text-green"
               />
               <Stat
-                label="TGE Unlock (20%)"
+                label={t("detail.tgeUnlock", lang)}
                 value={"$" + roiResult.tge.toFixed(2)}
                 color="text-amber"
               />
@@ -182,45 +168,43 @@ export function DetailsView({ project }: { project: Project }) {
         </div>
       </Card>
 
-      {/* Point Scenarios */}
       <SectionTitle icon={<Target className="w-4 h-4" />}>
-        Point Scenarios
+        {t("detail.pointScenarios", lang)}
       </SectionTitle>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-green/20">
           <h3 className="text-xs text-green font-semibold uppercase tracking-wider mb-3">
-            Conservative
+            {t("detail.conservative", lang)}
           </h3>
           <div className="grid grid-cols-2 gap-2">
-            <Stat label="Total Points" value={fmt(scenarioConservative.totalPts)} />
+            <Stat label={t("detail.totalPoints", lang)} value={fmt(scenarioConservative.totalPts)} />
             <Stat label="VPP" value={fmtVpp(scenarioConservative.vpp)} color="text-green" />
-            <Stat label="Daily Points" value={fmt(scenarioConservative.dailyPts)} />
-            <Stat label="Points/Token" value={fmt(scenarioConservative.ppt)} />
+            <Stat label={t("detail.dailyPoints", lang)} value={fmt(scenarioConservative.dailyPts)} />
+            <Stat label={t("detail.pointsToken", lang)} value={fmt(scenarioConservative.ppt)} />
           </div>
         </Card>
         <Card className="border-purple/20">
           <h3 className="text-xs text-purple font-semibold uppercase tracking-wider mb-3">
-            Approximate
+            {t("detail.approximate", lang)}
           </h3>
           <div className="grid grid-cols-2 gap-2">
-            <Stat label="Total Points" value={fmt(scenarioApprox.totalPts)} />
+            <Stat label={t("detail.totalPoints", lang)} value={fmt(scenarioApprox.totalPts)} />
             <Stat label="VPP" value={fmtVpp(scenarioApprox.vpp)} color="text-purple" />
-            <Stat label="Daily Points" value={fmt(scenarioApprox.dailyPts)} />
-            <Stat label="Points/Token" value={fmt(scenarioApprox.ppt)} />
+            <Stat label={t("detail.dailyPoints", lang)} value={fmt(scenarioApprox.dailyPts)} />
+            <Stat label={t("detail.pointsToken", lang)} value={fmt(scenarioApprox.ppt)} />
           </div>
         </Card>
       </div>
 
-      {/* Scoring Status */}
       <Card>
-        <SectionTitle className="mb-3">Scoring Status</SectionTitle>
+        <SectionTitle className="mb-3">{t("detail.scoringStatus", lang)}</SectionTitle>
         <div className="grid grid-cols-3 gap-3">
           <Stat
-            label="Category"
-            value={project.cat === 1 ? "DeFi Protocol" : project.cat === 2 ? "Exchange" : "Other"}
+            label={t("detail.category", lang)}
+            value={project.cat === 1 ? t("detail.defiProtocol", lang) : project.cat === 2 ? t("detail.exchange", lang) : t("detail.other", lang)}
           />
-          <Stat label="Updated" value={project.updatedOn} />
-          <Stat label="Season End" value={project.seasonEnd} color="text-amber" />
+          <Stat label={t("detail.updated", lang)} value={project.updatedOn} />
+          <Stat label={t("detail.seasonEnd", lang)} value={project.seasonEnd} color="text-amber" />
         </div>
       </Card>
     </div>

@@ -6,9 +6,11 @@ import { LendingView } from "@/components/lending/LendingView";
 import { LoopView } from "@/components/loops/LoopView";
 import { AdminView } from "@/components/admin/AdminView";
 import { useAppStore } from "@/lib/store";
+import { t } from "@/lib/i18n";
 
 export default function Home() {
   const view = useAppStore((s) => s.view);
+  const lang = useAppStore((s) => s.lang);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -21,10 +23,10 @@ export default function Home() {
 
         <footer className="mt-12 py-6 border-t border-border text-center">
           <p className="text-xs text-text-muted">
-            npk research does not provide financial advice. All calculations are estimates. DYOR.
+            {t("footer.disclaimer", lang)}
           </p>
           <p className="text-[10px] text-text-muted/60 mt-1">
-            Formulas are visible and auditable. Verify before acting.
+            {t("footer.audit", lang)}
           </p>
         </footer>
       </main>

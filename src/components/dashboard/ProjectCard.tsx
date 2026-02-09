@@ -4,6 +4,8 @@ import { Project } from "@/lib/types";
 import { calcMetrics } from "@/lib/engine";
 import { Badge } from "@/components/ui/Badge";
 import { Clock } from "lucide-react";
+import { useAppStore } from "@/lib/store";
+import { t } from "@/lib/i18n";
 
 function fmt(n: number, d = 2): string {
   if (n >= 1e12) return (n / 1e12).toFixed(d) + "T";
@@ -30,6 +32,7 @@ export function ProjectCard({
   project: Project;
   onClick: () => void;
 }) {
+  const lang = useAppStore((s) => s.lang);
   const m = calcMetrics(project);
 
   const statusVariant =
@@ -38,6 +41,8 @@ export function ProjectCard({
       : project.status === "ended"
       ? "red"
       : "amber";
+
+  const statusLabel = t(`status.${project.status}` as "status.active" | "status.ended" | "status.upcoming", lang);
 
   return (
     <div
@@ -54,7 +59,7 @@ export function ProjectCard({
               {project.name}
             </h3>
             <Badge variant="brand">{project.season}</Badge>
-            <Badge variant={statusVariant}>{project.status}</Badge>
+            <Badge variant={statusVariant}>{statusLabel}</Badge>
           </div>
           <div className="text-xs text-text-muted mt-0.5">{project.nc}</div>
         </div>
@@ -63,7 +68,7 @@ export function ProjectCard({
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div className="bg-green/10 border border-green/20 rounded-lg p-3">
           <div className="text-[10px] text-green/70 uppercase tracking-wider mb-1">
-            VPP Conservative
+            {t("card.vppConservative", lang)}
           </div>
           <div className="font-mono text-sm font-bold text-green">
             {fmtVpp(m.vc)}
@@ -71,7 +76,7 @@ export function ProjectCard({
         </div>
         <div className="bg-purple/10 border border-purple/20 rounded-lg p-3">
           <div className="text-[10px] text-purple/70 uppercase tracking-wider mb-1">
-            VPP Approximate
+            {t("card.vppApproximate", lang)}
           </div>
           <div className="font-mono text-sm font-bold text-purple">
             {fmtVpp(m.va)}
@@ -96,7 +101,7 @@ export function ProjectCard({
 
       <div className="flex items-center gap-1.5 text-xs text-text-muted">
         <Clock className="w-3 h-3" />
-        <span className="font-mono">{m.d}</span> days remaining
+        <span className="font-mono">{m.d}</span> {t("card.daysRemaining", lang)}
       </div>
     </div>
   );

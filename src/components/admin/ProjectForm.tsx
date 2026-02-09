@@ -7,12 +7,8 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Card } from "@/components/ui/Card";
-
-const statusOptions = [
-  { value: "active", label: "Active" },
-  { value: "ended", label: "Ended" },
-  { value: "upcoming", label: "Upcoming" },
-];
+import { useAppStore } from "@/lib/store";
+import { t } from "@/lib/i18n";
 
 const defaultProject: Project = {
   id: "",
@@ -46,6 +42,7 @@ export function ProjectForm({
   onSave: (p: Project) => void;
   onCancel: () => void;
 }) {
+  const lang = useAppStore((s) => s.lang);
   const [form, setForm] = useState<Project>(initial || { ...defaultProject, id: Date.now().toString(36) });
 
   const set = <K extends keyof Project>(key: K, val: Project[K]) =>
@@ -54,116 +51,63 @@ export function ProjectForm({
   const setNum = (key: keyof Project, val: string) =>
     set(key, (parseFloat(val) || 0) as never);
 
+  const statusOptions = [
+    { value: "active", label: t("status.active", lang) },
+    { value: "ended", label: t("status.ended", lang) },
+    { value: "upcoming", label: t("status.upcoming", lang) },
+  ];
+
   return (
     <div className="space-y-6">
-      <SectionTitle>Basic Information</SectionTitle>
+      <SectionTitle>{t("form.basicInfo", lang)}</SectionTitle>
       <Card>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Name" value={form.name} onChange={(v) => set("name", v)} />
-          <Input label="Season" value={form.season} onChange={(v) => set("season", v)} />
-          <Select
-            label="Status"
-            value={form.status}
-            onChange={(v) => set("status", v as Project["status"])}
-            options={statusOptions}
-          />
-          <Input label="Network" value={form.network} onChange={(v) => set("network", v)} />
-          <Input label="Network Category" value={form.nc} onChange={(v) => set("nc", v)} />
-          <Input label="Token Ticker" value={form.tokenTicker} onChange={(v) => set("tokenTicker", v)} />
-          <Input label="Description" value={form.desc} onChange={(v) => set("desc", v)} className="col-span-2" />
+          <Input label={t("form.name", lang)} value={form.name} onChange={(v) => set("name", v)} />
+          <Input label={t("form.season", lang)} value={form.season} onChange={(v) => set("season", v)} />
+          <Select label={t("form.status", lang)} value={form.status} onChange={(v) => set("status", v as Project["status"])} options={statusOptions} />
+          <Input label={t("form.network", lang)} value={form.network} onChange={(v) => set("network", v)} />
+          <Input label={t("form.networkCat", lang)} value={form.nc} onChange={(v) => set("nc", v)} />
+          <Input label={t("form.tokenTicker", lang)} value={form.tokenTicker} onChange={(v) => set("tokenTicker", v)} />
+          <Input label={t("form.description", lang)} value={form.desc} onChange={(v) => set("desc", v)} className="col-span-2" />
         </div>
       </Card>
 
-      <SectionTitle>Tokenomics</SectionTitle>
+      <SectionTitle>{t("form.tokenomics", lang)}</SectionTitle>
       <Card>
         <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Total Supply Tokens"
-            value={form.totalSupplyTokens}
-            onChange={(v) => setNum("totalSupplyTokens", v)}
-            type="number"
-          />
-          <Input
-            label="FDV"
-            value={form.fdv}
-            onChange={(v) => setNum("fdv", v)}
-            type="number"
-            suffix="USD"
-          />
-          <Input
-            label="Airdrop %"
-            value={form.airdropPercent}
-            onChange={(v) => setNum("airdropPercent", v)}
-            type="number"
-            suffix="%"
-          />
-          <Input
-            label="TVL"
-            value={form.tvl}
-            onChange={(v) => setNum("tvl", v)}
-            type="number"
-            suffix="USD"
-          />
-          <Input
-            label="Token Value"
-            value={form.tokenValue}
-            onChange={(v) => setNum("tokenValue", v)}
-            type="number"
-            suffix="USD"
-          />
-          <Input
-            label="Category"
-            value={form.cat}
-            onChange={(v) => setNum("cat", v)}
-            type="number"
-          />
+          <Input label={t("form.totalSupply", lang)} value={form.totalSupplyTokens} onChange={(v) => setNum("totalSupplyTokens", v)} type="number" />
+          <Input label="FDV" value={form.fdv} onChange={(v) => setNum("fdv", v)} type="number" suffix="USD" />
+          <Input label="Airdrop %" value={form.airdropPercent} onChange={(v) => setNum("airdropPercent", v)} type="number" suffix="%" />
+          <Input label={t("form.tvl", lang)} value={form.tvl} onChange={(v) => setNum("tvl", v)} type="number" suffix="USD" />
+          <Input label={t("form.tokenValue", lang)} value={form.tokenValue} onChange={(v) => setNum("tokenValue", v)} type="number" suffix="USD" />
+          <Input label={t("form.category", lang)} value={form.cat} onChange={(v) => setNum("cat", v)} type="number" />
         </div>
       </Card>
 
-      <SectionTitle>Points</SectionTitle>
+      <SectionTitle>{t("form.points", lang)}</SectionTitle>
       <Card>
         <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Current Points"
-            value={form.currentPoints}
-            onChange={(v) => setNum("currentPoints", v)}
-            type="number"
-          />
-          <Input
-            label="Points Per Day"
-            value={form.ppd}
-            onChange={(v) => setNum("ppd", v)}
-            type="number"
-          />
-          <Input
-            label="Season End"
-            value={form.seasonEnd}
-            onChange={(v) => set("seasonEnd", v)}
-            type="date"
-          />
-          <Input
-            label="Updated On"
-            value={form.updatedOn}
-            onChange={(v) => set("updatedOn", v)}
-            type="date"
-          />
+          <Input label={t("form.currentPoints", lang)} value={form.currentPoints} onChange={(v) => setNum("currentPoints", v)} type="number" />
+          <Input label={t("form.ppd", lang)} value={form.ppd} onChange={(v) => setNum("ppd", v)} type="number" />
+          <Input label={t("form.seasonEnd", lang)} value={form.seasonEnd} onChange={(v) => set("seasonEnd", v)} type="date" />
+          <Input label={t("form.updatedOn", lang)} value={form.updatedOn} onChange={(v) => set("updatedOn", v)} type="date" />
         </div>
       </Card>
 
-      <SectionTitle>Descriptions</SectionTitle>
+      <SectionTitle>{t("form.descriptions", lang)}</SectionTitle>
       <Card>
         <div className="space-y-3">
-          <Input label="Notice" value={form.notice} onChange={(v) => set("notice", v)} />
-          <Input label="Project Description" value={form.projDesc} onChange={(v) => set("projDesc", v)} />
+          <Input label={t("form.notice", lang)} value={form.notice} onChange={(v) => set("notice", v)} />
+          <Input label={t("form.projDesc", lang)} value={form.projDesc} onChange={(v) => set("projDesc", v)} />
         </div>
       </Card>
 
       <div className="flex gap-2">
         <Button onClick={() => onSave(form)}>
-          {initial ? "Update Project" : "Add Project"}
+          {initial ? t("form.update", lang) : t("form.add", lang)}
         </Button>
         <Button variant="ghost" onClick={onCancel}>
-          Cancel
+          {t("form.cancel", lang)}
         </Button>
       </div>
     </div>

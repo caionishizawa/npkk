@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { Project, LiqResult, LoopResult, LoopParams } from "./types";
 import { DEFAULT_PROJECTS, ASSET_PRICES } from "./data";
 import { calcLiquidation, simulateLoops } from "./engine";
+import type { Lang } from "./i18n";
 
 // ========================
 // App Store
@@ -12,9 +13,11 @@ interface AppState {
   projects: Project[];
   view: ViewType;
   selectedProjectId: string | null;
+  lang: Lang;
 
   setView: (v: ViewType) => void;
   setSelected: (id: string | null) => void;
+  setLang: (l: Lang) => void;
   addProject: (p: Project) => void;
   updateProject: (id: string, p: Partial<Project>) => void;
   deleteProject: (id: string) => void;
@@ -24,9 +27,11 @@ export const useAppStore = create<AppState>((set) => ({
   projects: DEFAULT_PROJECTS,
   view: "airdrops",
   selectedProjectId: null,
+  lang: "pt",
 
   setView: (view) => set({ view, selectedProjectId: null }),
   setSelected: (selectedProjectId) => set({ selectedProjectId }),
+  setLang: (lang) => set({ lang }),
   addProject: (p) => set((s) => ({ projects: [...s.projects, p] })),
   updateProject: (id, partial) =>
     set((s) => ({
